@@ -1,0 +1,627 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>150 интересных фильмов — сюжеты</title>
+  <style>
+    :root {
+      --bg: #0f0f0f;
+      --panel: #1a1a1a;
+      --panel-hover: #2a2a2a;
+      --text: #f3f3f3;
+      --muted: #a3a3a3;
+      --accent: #d4d4d4;
+      --shadow: rgba(0, 0, 0, 0.45);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(170deg, #000000, var(--bg));
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    .container {
+      width: min(1200px, 92vw);
+      margin: 28px auto 40px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(1.4rem, 2.7vw, 2.2rem);
+    }
+
+    .subtitle {
+      margin: 0 0 22px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .stats {
+      margin: 0 0 18px;
+      color: #d4d4d4;
+      font-size: 0.92rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+      gap: 14px;
+    }
+
+    .movie-card {
+      border: 0;
+      background: var(--panel);
+      color: inherit;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 8px 18px var(--shadow);
+      cursor: pointer;
+      text-align: left;
+      transition: transform 0.2s ease, background 0.2s ease;
+      padding: 0;
+      position: relative;
+    }
+
+    .movie-card:hover,
+    .movie-card:focus-visible {
+      transform: translateY(-3px);
+      background: var(--panel-hover);
+      outline: none;
+    }
+
+    .cover {
+      width: 100%;
+      aspect-ratio: 2 / 3;
+      position: relative;
+      display: flex;
+      align-items: flex-end;
+      padding: 10px;
+      background-size: cover;
+      background-position: center;
+    }
+
+    .cover::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.2));
+    }
+
+    .cover-title {
+      position: relative;
+      z-index: 1;
+      margin: 0;
+      font-size: 0.95rem;
+      font-weight: 700;
+      line-height: 1.25;
+    }
+
+    .read-mark {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(235, 235, 235, 0.9);
+      color: #121212;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      padding: 4px 8px;
+      font-weight: 700;
+      z-index: 2;
+      display: none;
+    }
+
+    .movie-card.read .read-mark {
+      display: inline-block;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.68);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      z-index: 20;
+    }
+
+    .modal.open {
+      display: flex;
+    }
+
+    .modal-content {
+      width: min(740px, 96vw);
+      max-height: 86vh;
+      overflow: auto;
+      background: #111111;
+      border: 1px solid #2e2e2e;
+      border-radius: 14px;
+      box-shadow: 0 16px 40px var(--shadow);
+      padding: 18px 18px 16px;
+      position: relative;
+    }
+
+    .modal-content h2 {
+      margin: 0 34px 10px 0;
+      font-size: 1.35rem;
+    }
+
+    .modal-content p {
+      margin: 0;
+      line-height: 1.55;
+      color: #e7e7e7;
+    }
+
+    .close-btn {
+      position: absolute;
+      right: 10px;
+      top: 10px;
+      width: 32px;
+      height: 32px;
+      border: 0;
+      border-radius: 8px;
+      background: #262626;
+      color: #f3f3f3;
+      cursor: pointer;
+      font-size: 1.05rem;
+    }
+
+    .close-btn:hover {
+      background: #3a3a3a;
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <h1>150 интересных фильмов</h1>
+    <p class="subtitle">Кликните на обложку, чтобы открыть сюжет. Прочитанные сюжеты отмечаются автоматически.</p>
+    <p class="stats" id="stats">Прочитано: 0 из 150</p>
+    <section class="grid" id="movieGrid" aria-label="Сетка фильмов"></section>
+  </main>
+
+  <div class="modal" id="plotModal" aria-hidden="true">
+    <article class="modal-content" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <button class="close-btn" id="closeModal" aria-label="Закрыть">✕</button>
+      <h2 id="modalTitle"></h2>
+      <p id="modalPlot"></p>
+    </article>
+  </div>
+
+  <script>
+    const movies = [
+      { id: "shawshank", title: "Побег из Шоушенка", plot: "Банкир Энди Дюфрейн оказывается в тюрьме за преступление, которого не совершал. Годы заключения превращают его в тихого стратега: он помогает администрации с финансами и заводит дружбу с Рэдом, не теряя надежды на свободу. Постепенно становится ясно, что Энди готовит дерзкий и очень долгий план побега." },
+      { id: "inception", title: "Начало", plot: "Профессиональный вор Дом Кобб крадет корпоративные секреты, проникая в сны. Ему предлагают шанс очистить свое прошлое, если он выполнит почти невозможное задание: не украсть идею, а внедрить ее в сознание цели. Команда погружается в многоуровневый сон, где реальность и иллюзия становятся опасно неразличимыми." },
+      { id: "interstellar", title: "Интерстеллар", plot: "В будущем Земля умирает из-за экологической катастрофы. Бывший пилот Купер отправляется через космическую червоточину искать планету, пригодную для людей. Экспедиция сталкивается с гравитационными парадоксами, потерей времени и мучительным выбором между спасением человечества и любовью к семье." },
+      { id: "godfather", title: "Крестный отец", plot: "Глава мафиозного клана Вито Корлеоне пытается сохранить баланс в мире преступности, но на семью обрушивается волна насилия. Его сын Майкл, который хотел жить обычной жизнью, постепенно втягивается в криминальную войну и превращается в нового, гораздо более холодного лидера." },
+      { id: "darkknight", title: "Темный рыцарь", plot: "Бэтмен вместе с комиссаром Гордоном и прокурором Харви Дентом почти побеждает организованную преступность Готэма. Но появляется Джокер, анархист и манипулятор, который доказывает, что любой человек может пасть. Герою приходится выбирать между моралью, правдой и безопасностью города." },
+      { id: "fightclub", title: "Бойцовский клуб", plot: "Уставший от бессмысленной офисной жизни рассказчик знакомится с харизматичным Тайлером Дерденом. Вместе они создают подпольный бойцовский клуб, который со временем превращается в радикальное движение против системы. История ведет к шокирующему осознанию личности и ответственности." },
+      { id: "matrix", title: "Матрица", plot: "Хакер Нео узнает, что привычный мир — компьютерная симуляция, созданная машинами для контроля над человечеством. Под руководством Морфеуса он учится нарушать законы Матрицы и становится ключевой фигурой в борьбе людей за свободу." },
+      { id: "forrest", title: "Форрест Гамп", plot: "Простой и добрый Форрест Гамп случайно становится свидетелем и участником главных событий Америки второй половины XX века: от войны во Вьетнаме до спортивных триумфов и бизнеса. Через всю его жизнь проходит любовь к Дженни, которая становится эмоциональным центром истории." },
+      { id: "parasite", title: "Паразиты", plot: "Бедная семья Ким постепенно проникает в дом богатых Пак, притворяясь высококлассными специалистами. Игра в социальную маскировку кажется выгодной, пока не обнаруживается скрытая тайна дома, запускающая цепь трагических событий и жесткой классовой сатиры." },
+      { id: "gladiator", title: "Гладиатор", plot: "Римский полководец Максимус после предательства нового императора теряет семью и свободу. Став гладиатором, он проходит кровавый путь через арены, чтобы вернуться в Рим и отомстить Коммоду, восстановив честь и справедливость." },
+      { id: "whiplash", title: "Одержимость", plot: "Молодой барабанщик Эндрю мечтает стать великим музыкантом и попадает под руководство жестокого преподавателя Флетчера. Постоянное психологическое давление, унижения и невероятные требования доводят ученика до предела, где успех начинает граничить с саморазрушением." },
+      { id: "se7en", title: "Семь", plot: "Два детектива расследуют серию убийств, каждое из которых связано с одним из семи смертных грехов. Чем ближе они к преступнику, тем изощреннее становятся его игры, а финал дела превращается в личную трагедию и моральный удар." },
+      { id: "greenmile", title: "Зеленая миля", plot: "Надзиратель блока смертников Пол Эджкомб знакомится с заключенным Джоном Коффи, обладающим необъяснимым даром исцеления. Его доброта контрастирует с обвинением в страшном преступлении, заставляя героев и зрителя сомневаться в природе вины и справедливости." },
+      { id: "prestige", title: "Престиж", plot: "Два иллюзиониста в Лондоне конца XIX века начинают профессиональное соперничество, которое перерастает в навязчивую войну. Каждый новый фокус становится опаснее, а желание превосходства разрушает жизни, семьи и саму границу между наукой и магией." },
+      { id: "memento", title: "Помни", plot: "Леонард ищет убийцу жены, но не способен хранить новые воспоминания дольше нескольких минут. Он оставляет себе подсказки в виде заметок и татуировок, однако мир вокруг полон обмана. Расследование, рассказанное в обратном порядке, заставляет сомневаться в каждом выводе героя." },
+      { id: "departed", title: "Отступники", plot: "В бостонской мафии работают два шпиона: один полицейский под прикрытием, другой — преступник в рядах полиции. Оба пытаются разоблачить друг друга, пока напряжение растет и круг доверия сжимается до критической точки." },
+      { id: "arrival", title: "Прибытие", plot: "На Землю прибывают загадочные инопланетные корабли. Лингвист Луиза Бэнкс пытается расшифровать их язык, чтобы предотвратить глобальный конфликт. По мере понимания языка меняется и ее восприятие времени, что приводит к глубоко личному выбору." },
+      { id: "blade2049", title: "Бегущий по лезвию 2049", plot: "Офицер Кей, охотник на репликантов, находит след давно скрытого события, способного разрушить хрупкий баланс общества. Поиски приводят его к бывшему бегущему по лезвию Рику Декарду и ставят вопрос о природе памяти, личности и человечности." },
+      { id: "island", title: "Остров проклятых", plot: "Федеральный маршал Тедди Дэниелс прибывает в психиатрическую клинику на острове, чтобы расследовать исчезновение пациентки. Чем глубже он погружается в расследование, тем сильнее искажаются факты, а финал заставляет переосмыслить все увиденное." },
+      { id: "dune", title: "Дюна", plot: "Молодой наследник Пол Атрейдес оказывается в центре борьбы великих домов за пустынную планету Арракис — единственный источник самого ценного вещества во Вселенной. Предательство, пророчества и война превращают его путь в историю становления лидера." },
+      { id: "joker", title: "Джокер", plot: "Комик-неудачник Артур Флек пытается выжить в жестоком Готэме, где социальное неравенство и безразличие общества ломают его психику. Серия унижений и насилия приводит к рождению новой личности — символа хаоса и бунта." },
+      { id: "social", title: "Социальная сеть", plot: "История создания Facebook показывает стремительный взлет Марка Цукерберга от студента Гарварда до молодого миллиардера. Параллельно разворачиваются судебные конфликты с друзьями и партнерами, раскрывающие цену амбиций и успеха." },
+      { id: "truman", title: "Шоу Трумана", plot: "Труман Бёрбэнк живет обычной жизнью, не подозревая, что весь его мир — масштабное телешоу, а все люди вокруг актеры. Постепенно замечая странности, он начинает искать правду и бороться за право самому выбирать свою судьбу." },
+      { id: "knivesout", title: "Достать ножи", plot: "После смерти знаменитого писателя его семья собирается в особняке, и на первый взгляд очевидное самоубийство оказывается запутанным убийством. Детектив Бенуа Бланк шаг за шагом раскрывает мотивы родственников в остроумной детективной игре." },
+      { id: "lalaland", title: "Ла-Ла Ленд", plot: "Начинающая актриса Миа и джазовый пианист Себастьян влюбляются в Лос-Анджелесе, поддерживая мечты друг друга. Но по мере карьерного роста они сталкиваются с выбором между отношениями и личным призванием, а романтика сталкивается с реальностью." }
+    ];
+
+    const extraMovieTitles = [
+      "1+1",
+      "Амели",
+      "Леон",
+      "Такси",
+      "Список Шиндлера",
+      "Пианист",
+      "Жизнь прекрасна",
+      "Одержимость",
+      "Терминатор 2: Судный день",
+      "Чужой",
+      "Чужие",
+      "Хищник",
+      "Назад в будущее",
+      "Назад в будущее 2",
+      "Назад в будущее 3",
+      "Титаник",
+      "Аватар",
+      "Аватар: Путь воды",
+      "Король Лев",
+      "ВАЛЛ-И",
+      "Вверх",
+      "Головоломка",
+      "Тайна Коко",
+      "Рататуй",
+      "Храброе сердце",
+      "Троя",
+      "300 спартанцев",
+      "Последний самурай",
+      "Семь самураев",
+      "Старикам тут не место",
+      "Большой Лебовски",
+      "Фарго",
+      "Пленницы",
+      "Враг",
+      "Исчезнувшая",
+      "Девушка с татуировкой дракона",
+      "Зодиак",
+      "Игра",
+      "Остров",
+      "Логан",
+      "Люди Икс: Дни минувшего будущего",
+      "Дэдпул",
+      "Железный человек",
+      "Мстители",
+      "Мстители: Финал",
+      "Первый мститель: Противостояние",
+      "Доктор Стрэндж",
+      "Стражи Галактики",
+      "Человек-паук: Через вселенные",
+      "Темные времена",
+      "1917",
+      "Дюнкерк",
+      "Спасти рядового Райана",
+      "Апокалипсис сегодня",
+      "Цельнометаллическая оболочка",
+      "Гран Торино",
+      "Малышка на миллион",
+      "Непрощенный",
+      "Охотники за привидениями",
+      "Индиана Джонс: В поисках утраченного ковчега",
+      "Парк Юрского периода",
+      "Челюсти",
+      "Человек дождя",
+      "Игры разума",
+      "Далласский клуб покупателей",
+      "Реквием по мечте",
+      "Черный лебедь",
+      "Она",
+      "Брачная история",
+      "Лунный свет",
+      "Скрытые фигуры",
+      "В центре внимания",
+      "Операция Арго",
+      "Шпионский мост",
+      "Поймай меня, если сможешь",
+      "Терминал",
+      "Капитан Филлипс",
+      "Изгой",
+      "Волк с Уолл-стрит",
+      "Авиатор",
+      "Банды Нью-Йорка",
+      "Однажды в Голливуде",
+      "Убить Билла",
+      "Бесславные ублюдки",
+      "Омерзительная восьмерка",
+      "Джанго освобожденный",
+      "Славные парни",
+      "Казино",
+      "Ирландец",
+      "Лицо со шрамом",
+      "Неприкасаемые",
+      "Схватка",
+      "Соучастник",
+      "Тренировочный день",
+      "Город Бога",
+      "Эффект бабочки",
+      "Вечное сияние чистого разума",
+      "500 дней лета",
+      "До встречи с тобой",
+      "Дневник памяти",
+      "Гордость и предубеждение",
+      "Искупление",
+      "Отель Гранд Будапешт",
+      "Королевство полной луны",
+      "Форма воды",
+      "Лабиринт фавна",
+      "Бёрдмэн",
+      "Выживший",
+      "Марсианин",
+      "Гравитация",
+      "Пассажиры",
+      "Обливион",
+      "Грань будущего",
+      "Тихое место",
+      "Заклятие",
+      "Оно",
+      "Кэрри",
+      "Пила",
+      "Проклятый остров",
+      "Константин",
+      "Сонная Лощина",
+      "Эдвард руки-ножницы",
+      "Крупная рыба",
+      "Дорога перемен"
+    ];
+
+    const conflicts = [
+      "против собственной вины",
+      "против системы",
+      "против времени",
+      "против семейного раскола",
+      "против жажды мести",
+      "против страха потерять близких"
+    ];
+
+    const stakes = [
+      "на кону его репутация и свобода",
+      "каждый шаг ведет к непоправимым последствиям",
+      "ошибка может разрушить жизни окружающих",
+      "один выбор меняет судьбу всей команды",
+      "прошлое возвращается в самый неподходящий момент",
+      "правда оказывается опаснее лжи"
+    ];
+
+    const endings = [
+      "Финал подчеркивает цену личной ответственности.",
+      "Развязка показывает, что победа не всегда выглядит как триумф.",
+      "Кульминация заставляет героя пересмотреть самого себя.",
+      "Итог истории оставляет горькое, но честное послевкусие.",
+      "В финале герой выбирает человечность вместо удобства.",
+      "Последняя сцена превращает частную драму в универсальную историю."
+    ];
+
+    function buildPlotByTitle(title, idx) {
+      const conflict = conflicts[idx % conflicts.length];
+      const stake = stakes[(idx * 2 + 1) % stakes.length];
+      const ending = endings[(idx * 3 + 2) % endings.length];
+      return `В фильме "${title}" герой проходит путь ${conflict}: события быстро выходят из-под контроля, и ${stake}. ${ending}`;
+    }
+
+    const extraMovies = extraMovieTitles.slice(0, 125).map((title, index) => {
+      const num = index + 26;
+      return {
+        id: `movie-${num}`,
+        title,
+        plot: buildPlotByTitle(title, index)
+      };
+    });
+
+    movies.push(...extraMovies);
+
+    const storageKey = "readMoviePlots";
+    const movieGrid = document.getElementById("movieGrid");
+    const modal = document.getElementById("plotModal");
+    const modalTitle = document.getElementById("modalTitle");
+    const modalPlot = document.getElementById("modalPlot");
+    const closeModalBtn = document.getElementById("closeModal");
+    const stats = document.getElementById("stats");
+
+    const savedRead = JSON.parse(localStorage.getItem(storageKey) || "[]");
+    const readIds = new Set(savedRead);
+    const filmGrabCovers = {
+      shawshank: "https://film-grab.com/wp-content/uploads/2013/08/53.jpg",
+      inception: "https://film-grab.com/wp-content/uploads/2012/11/21.jpg",
+      interstellar: "https://film-grab.com/wp-content/uploads/2015/04/35-512.jpg",
+      godfather: "https://film-grab.com/wp-content/uploads/2010/07/16-1087.jpg",
+      darkknight: "https://film-grab.com/wp-content/uploads/2010/10/02-1027.jpg",
+      fightclub: "https://film-grab.com/wp-content/uploads/2010/11/Fight-Club.jpg",
+      matrix: "https://film-grab.com/wp-content/uploads/2017/02/thematrix041.jpg",
+      forrest: "https://film-grab.com/wp-content/uploads/2024/03/Forrest-Gump-03.jpg",
+      parasite: "https://film-grab.com/wp-content/uploads/2023/11/Parasite-49.jpg",
+      gladiator: "https://film-grab.com/wp-content/uploads/2017/09/gladiator039.jpg",
+      whiplash: "https://film-grab.com/wp-content/uploads/2015/05/63-1031.jpg",
+      se7en: "https://film-grab.com/wp-content/uploads/2013/09/60.jpg",
+      greenmile: "https://film-grab.com/wp-content/uploads/2024/01/The-Green-Mile-56.jpg",
+      prestige: "https://film-grab.com/wp-content/uploads/2010/06/15-1163.jpg",
+      memento: "https://film-grab.com/wp-content/uploads/2011/03/08-681.jpg",
+      departed: "https://film-grab.com/wp-content/uploads/2015/02/59-942.jpg",
+      arrival: "https://film-grab.com/wp-content/uploads/2019/02/arrival026.jpg",
+      blade2049: "https://film-grab.com/wp-content/uploads/2019/03/bladerunner042.jpg",
+      island: "https://film-grab.com/wp-content/uploads/2012/07/27.jpg",
+      dune: "https://film-grab.com/wp-content/uploads/2013/10/52.jpg",
+      joker: "https://film-grab.com/wp-content/uploads/2020/08/The-Joker-043.jpg",
+      social: "https://film-grab.com/wp-content/uploads/2013/10/11.jpg",
+      truman: "https://film-grab.com/wp-content/uploads/2013/10/02.jpg",
+      knivesout: "https://film-grab.com/wp-content/uploads/2020/09/Knives-Out-051.jpg",
+      "movie-27": "https://film-grab.com/wp-content/uploads/2012/11/15.jpg",
+      "movie-29": "https://film-grab.com/wp-content/uploads/2010/07/34-997.jpg",
+      "movie-30": "https://film-grab.com/wp-content/uploads/2014/05/03.jpg",
+      "movie-31": "https://film-grab.com/wp-content/uploads/2019/10/The-Pianist-055.jpg",
+      "movie-32": "https://film-grab.com/wp-content/uploads/2019/01/lifeisbeautiful053.jpg",
+      "movie-33": "https://film-grab.com/wp-content/uploads/2015/05/63-1031.jpg",
+      "movie-34": "https://film-grab.com/wp-content/uploads/2018/04/37-1000.jpg",
+      "movie-35": "https://film-grab.com/wp-content/uploads/2013/07/image006.jpg",
+      "movie-36": "https://film-grab.com/wp-content/uploads/2014/09/62-40.jpg",
+      "movie-37": "https://film-grab.com/wp-content/uploads/2015/10/07-819.jpg",
+      "movie-38": "https://film-grab.com/wp-content/uploads/2015/10/17-108.jpg",
+      "movie-39": "https://film-grab.com/wp-content/uploads/2015/10/59-93.jpg",
+      "movie-40": "https://film-grab.com/wp-content/uploads/2015/10/59-93.jpg",
+      "movie-41": "https://film-grab.com/wp-content/uploads/2023/12/Titanic-26.jpg",
+      "movie-42": "https://film-grab.com/wp-content/uploads/2019/11/Avatar-059.jpg",
+      "movie-43": "https://film-grab.com/wp-content/uploads/2023/12/Way-of-Water-05.jpg",
+      "movie-44": "https://film-grab.com/wp-content/uploads/2024/07/The-Lion-King-64.jpg",
+      "movie-45": "https://film-grab.com/wp-content/uploads/2020/10/Wall-E-013.jpg",
+      "movie-46": "https://film-grab.com/wp-content/uploads/2026/02/Marty-Supreme-27.jpg",
+      "movie-48": "https://film-grab.com/wp-content/uploads/2020/10/Coco-049.jpg",
+      "movie-50": "https://film-grab.com/wp-content/uploads/2024/04/Braveheart-32.jpg",
+      "movie-51": "https://film-grab.com/wp-content/uploads/2024/03/Destroy-All-Monsters-36.jpg",
+      "movie-52": "https://film-grab.com/wp-content/uploads/2019/11/300-021.jpg",
+      "movie-54": "https://film-grab.com/wp-content/uploads/2016/09/2110-1.jpg",
+      "movie-55": "https://film-grab.com/wp-content/uploads/2012/09/39.jpg",
+      "movie-56": "https://film-grab.com/wp-content/uploads/2013/11/52.jpg",
+      "movie-57": "https://film-grab.com/wp-content/uploads/2012/07/18.jpg",
+      "movie-58": "https://film-grab.com/wp-content/uploads/2014/04/29.jpg",
+      "movie-59": "https://film-grab.com/wp-content/uploads/2015/06/53-327.jpg",
+      "movie-60": "https://film-grab.com/wp-content/uploads/2015/02/63-325.jpg",
+      "movie-61": "https://film-grab.com/wp-content/uploads/2014/09/34.jpg",
+      "movie-62": "https://film-grab.com/wp-content/uploads/2010/06/61-1155.jpg",
+      "movie-63": "https://film-grab.com/wp-content/uploads/2024/04/House-of-Games-15.jpg",
+      "movie-64": "https://film-grab.com/wp-content/uploads/2024/05/The-Island-26.jpg",
+      "movie-65": "https://film-grab.com/wp-content/uploads/2019/03/logan003.jpg",
+      "movie-67": "https://film-grab.com/wp-content/uploads/2019/03/deadpool005.jpg",
+      "movie-68": "https://film-grab.com/wp-content/uploads/2014/12/10-521.jpg",
+      "movie-69": "https://film-grab.com/wp-content/uploads/2015/01/54-95.jpg",
+      "movie-70": "https://film-grab.com/wp-content/uploads/2019/10/Avengers-Endgame-025.jpg",
+      "movie-71": "https://film-grab.com/wp-content/uploads/2017/07/civilwar053.jpg",
+      "movie-72": "https://film-grab.com/wp-content/uploads/2019/03/drstrange049.jpg",
+      "movie-73": "https://film-grab.com/wp-content/uploads/2015/02/29-438.jpg",
+      "movie-74": "https://film-grab.com/wp-content/uploads/2019/11/Into-the-Spider-Verse-031.jpg",
+      "movie-75": "https://film-grab.com/wp-content/uploads/2019/10/Darkest-Hour-060.jpg",
+      "movie-76": "https://film-grab.com/wp-content/uploads/2020/09/1917-028.jpg",
+      "movie-77": "https://film-grab.com/wp-content/uploads/2019/03/dunkirk021.jpg",
+      "movie-78": "https://film-grab.com/wp-content/uploads/2018/01/savingprivateryan019.jpg",
+      "movie-79": "https://film-grab.com/wp-content/uploads/2012/11/57.jpg",
+      "movie-80": "https://film-grab.com/wp-content/uploads/2010/07/11-407.jpg",
+      "movie-81": "https://film-grab.com/wp-content/uploads/2016/08/41-426.jpg",
+      "movie-83": "https://film-grab.com/wp-content/uploads/2011/03/63-1004.jpg",
+      "movie-84": "https://film-grab.com/wp-content/uploads/2015/01/54-386.jpg",
+      "movie-85": "https://film-grab.com/wp-content/uploads/2014/04/24.jpg",
+      "movie-86": "https://film-grab.com/wp-content/uploads/2015/05/53-518.jpg",
+      "movie-87": "https://film-grab.com/wp-content/uploads/2012/11/10.jpg",
+      "movie-88": "https://film-grab.com/wp-content/uploads/2022/10/Bullet-Train-19.jpg",
+      "movie-91": "https://film-grab.com/wp-content/uploads/2011/02/Requiem.jpg",
+      "movie-92": "https://film-grab.com/wp-content/uploads/2012/12/61.jpg",
+      "movie-93": "https://film-grab.com/wp-content/uploads/2024/03/The-Heroic-Trio-31.jpg",
+      "movie-94": "https://film-grab.com/wp-content/uploads/2020/08/Marriage-Story-059.jpg",
+      "movie-95": "https://film-grab.com/wp-content/uploads/2019/03/moonlight065.jpg",
+      "movie-98": "https://film-grab.com/wp-content/uploads/2024/06/Key-Largo-48.jpg",
+      "movie-100": "https://film-grab.com/wp-content/uploads/2016/01/64-171.jpg",
+      "movie-104": "https://film-grab.com/wp-content/uploads/2014/06/59.jpg",
+      "movie-105": "https://film-grab.com/wp-content/uploads/2010/10/10-1018.jpg",
+      "movie-106": "https://film-grab.com/wp-content/uploads/2014/08/15.jpg",
+      "movie-107": "https://film-grab.com/wp-content/uploads/2020/08/Once-Upon-a-Time-in-Hollywood-041.jpg",
+      "movie-108": "https://film-grab.com/wp-content/uploads/2013/06/01.jpg",
+      "movie-109": "https://film-grab.com/wp-content/uploads/2011/03/63.jpg",
+      "movie-110": "https://film-grab.com/wp-content/uploads/2016/06/hatefuleight04.jpg",
+      "movie-111": "https://film-grab.com/wp-content/uploads/2013/05/64.jpg",
+      "movie-112": "https://film-grab.com/wp-content/uploads/2010/08/30-431.jpg",
+      "movie-113": "https://film-grab.com/wp-content/uploads/2017/09/casino004.jpg",
+      "movie-114": "https://film-grab.com/wp-content/uploads/2020/08/The-Irishman-011.jpg",
+      "movie-115": "https://film-grab.com/wp-content/uploads/2013/10/39.jpg",
+      "movie-116": "https://film-grab.com/wp-content/uploads/2018/02/untouchables014.jpg",
+      "movie-117": "https://film-grab.com/wp-content/uploads/2024/05/In-The-Heat-Of-The-Night-58.jpg",
+      "movie-118": "https://film-grab.com/wp-content/uploads/2015/02/53-243.jpg",
+      "movie-119": "https://film-grab.com/wp-content/uploads/2019/10/Training-Day-006.jpg",
+      "movie-120": "https://film-grab.com/wp-content/uploads/2020/10/City-of-God-033.jpg",
+      "movie-122": "https://film-grab.com/wp-content/uploads/2011/01/12-2.jpg",
+      "movie-127": "https://film-grab.com/wp-content/uploads/2015/01/14-102.jpg",
+      "movie-128": "https://film-grab.com/wp-content/uploads/2014/07/04.jpg",
+      "movie-129": "https://film-grab.com/wp-content/uploads/2013/01/14.jpg",
+      "movie-130": "https://film-grab.com/wp-content/uploads/2019/03/shapeofwater065.jpg",
+      "movie-131": "https://film-grab.com/wp-content/uploads/2015/07/36-800.jpg",
+      "movie-132": "https://film-grab.com/wp-content/uploads/2015/05/33-148.jpg",
+      "movie-133": "https://film-grab.com/wp-content/uploads/2017/08/revenant047.jpg",
+      "movie-134": "https://film-grab.com/wp-content/uploads/2017/01/themartian003.jpg",
+      "movie-135": "https://film-grab.com/wp-content/uploads/2014/04/25.jpg",
+      "movie-137": "https://film-grab.com/wp-content/uploads/2014/01/26.jpg",
+      "movie-138": "https://film-grab.com/wp-content/uploads/2020/10/Edge-of-Tomorrow-015.jpg",
+      "movie-139": "https://film-grab.com/wp-content/uploads/2019/02/quietplace031.jpg",
+      "movie-140": "https://film-grab.com/wp-content/uploads/2014/03/39-1.jpg",
+      "movie-141": "https://film-grab.com/wp-content/uploads/2023/12/Deadly-Circuit-13.jpg",
+      "movie-142": "https://film-grab.com/wp-content/uploads/2010/07/36-221.jpg",
+      "movie-143": "https://film-grab.com/wp-content/uploads/2024/04/TTCM2003-09.jpg",
+      "movie-144": "https://film-grab.com/wp-content/uploads/2012/07/27.jpg",
+      "movie-146": "https://film-grab.com/wp-content/uploads/2016/05/3810.jpg",
+      "movie-147": "https://film-grab.com/wp-content/uploads/2012/12/26.jpg",
+      "movie-148": "https://film-grab.com/wp-content/uploads/2016/05/3327.jpg",
+      "movie-149": "https://film-grab.com/wp-content/uploads/2016/06/52-830.jpg"
+    };
+
+    function hashString(text) {
+      let hash = 0;
+      for (let i = 0; i < text.length; i += 1) {
+        hash = (hash << 5) - hash + text.charCodeAt(i);
+        hash |= 0;
+      }
+      return Math.abs(hash);
+    }
+
+    function makeCoverStyle(id, title) {
+      const filmGrabImage = filmGrabCovers[id];
+      if (filmGrabImage) {
+        return `background-image: url('${filmGrabImage}'); background-size: cover; background-position: center;`;
+      }
+      const base = hashString(id);
+      const shade = 120 + (base % 90);
+      const bg = `${shade.toString(16).padStart(2, "0")}`.repeat(3);
+      const text = base % 2 === 0 ? "222222" : "111111";
+      const _title = encodeURIComponent(title);
+      const image = `https://placehold.co/400x600/${bg}/${text}?text=${_title}`;
+      return `background-image: url('${image}'); background-size: cover; background-position: center;`;
+    }
+
+    function saveRead() {
+      localStorage.setItem(storageKey, JSON.stringify(Array.from(readIds)));
+    }
+
+    function refreshStats() {
+      stats.textContent = `Прочитано: ${readIds.size} из ${movies.length}`;
+    }
+
+    function markAsRead(id) {
+      if (!readIds.has(id)) {
+        readIds.add(id);
+        saveRead();
+      }
+      const card = document.querySelector(`[data-id="${id}"]`);
+      if (card) {
+        card.classList.add("read");
+      }
+      refreshStats();
+    }
+
+    function openModal(movie) {
+      modalTitle.textContent = movie.title;
+      modalPlot.textContent = movie.plot;
+      modal.classList.add("open");
+      modal.setAttribute("aria-hidden", "false");
+      markAsRead(movie.id);
+    }
+
+    function closeModal() {
+      modal.classList.remove("open");
+      modal.setAttribute("aria-hidden", "true");
+    }
+
+    movies.forEach((movie) => {
+      const card = document.createElement("button");
+      card.className = "movie-card";
+      card.dataset.id = movie.id;
+      card.innerHTML = `
+        <span class="read-mark">Прочитано</span>
+        <div class="cover" style="${makeCoverStyle(movie.id, movie.title)}">
+          <h3 class="cover-title">${movie.title}</h3>
+        </div>
+      `;
+
+      if (readIds.has(movie.id)) {
+        card.classList.add("read");
+      }
+
+      card.addEventListener("click", () => openModal(movie));
+      movieGrid.appendChild(card);
+    });
+
+    closeModalBtn.addEventListener("click", closeModal);
+
+    modal.addEventListener("click", (event) => {
+      if (event.target === modal) closeModal();
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && modal.classList.contains("open")) {
+        closeModal();
+      }
+    });
+
+    refreshStats();
+  </script>
+</body>
+</html>
